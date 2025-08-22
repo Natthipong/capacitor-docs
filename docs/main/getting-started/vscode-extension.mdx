@@ -1,26 +1,642 @@
----
-title: VS Code Extension
-description: Using the Ionic/Capacitor VS Code Extension
-slug: /getting-started/vscode-extension
----
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ใจสบาย Plus – แบบประเมินสุขภาพจิต</title>
 
-The [WebNative Visual Studio Code extension](https://marketplace.visualstudio.com/items?itemName=webnative.webnative) is a community-maintained plugin that helps you perform common Capacitor development tasks without needing to remember CLI commands.
+<!-- ฟอนต์ไทยยอดนิยม -->
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&family=Kanit:wght@300;400;600&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
 
-If you have VS Code on this computer click Install below. You can also find the extension by searching for "WebNative".
+<!-- jsPDF + html2canvas (ส่งออก PDF/PNG) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-<a href="vscode:extension/webnative.webnative" target="_self"><button style={{color: 'var(--c-admonition-info-bg)',cursor: 'pointer', fontWeight: 'bold', padding:16, paddingLeft:32, paddingRight:32, border:0, borderRadius:100, backgroundColor: 'var(--ifm-font-color-base)'}}>Install</button></a>
-<a href="https://webnative.dev/introduction/getting-started/" target="_self"><button style={{color: 'var(--ifm-font-color-base)',cursor: 'pointer', fontWeight: 'bold', padding:16, paddingLeft:32, paddingRight:32,  borderRadius:100, backgroundColor: 'var(--c-admonition-info-bg)'}}>Docs</button></a>
+<!-- Google API (เชื่อม Google Drive – ใส่คีย์ทีหลังได้) -->
+<script src="https://apis.google.com/js/api.js"></script>
 
-<h2>Additional Documentation</h2>
+<style>
+  :root{
+    --brand:#3498db;
+    --bg:#eef6fb;
+    --card:#ffffff;
+    --text:#2c3e50;
+  }
+  *{box-sizing:border-box}
+  body{font-family:"Prompt",sans-serif;background:var(--bg);color:var(--text);margin:0}
+  header{padding:18px 16px;text-align:center;background:#fff;border-bottom:1px solid #e6eef5}
+  h1{margin:6px 0 0}
+  main{max-width:900px;margin:0 auto;padding:16px}
+  .grid{display:grid;gap:16px}
+  .two{grid-template-columns:1fr 1fr}
+  .card{background:var(--card);border:1px solid #e6eef5;border-radius:12px;padding:16px}
+  .menu button,.btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:12px 16px;cursor:pointer}
+  .btn.secondary{background:#6c7a89}
+  .btn.warn{background:#e67e22}
+  .btn.danger{background:#e74c3c}
+  .btn.link{background:transparent;color:var(--brand);padding:0}
+  button:hover{filter:brightness(0.95)}
+  input,select,textarea{width:100%;padding:10px;border:1px solid #d6dee6;border-radius:10px}
+  .question h3{margin-top:0}
+  .options button{display:block;width:100%;margin:8px 0}
+  .history-entry{border-bottom:1px dashed #e5edf4;padding:8px 0}
+  .logo-wrap{display:flex;align-items:center;gap:12px;justify-content:center;flex-wrap:wrap}
+  .logo-wrap img{height:64px;width:64px;object-fit:contain;border-radius:50%;background:#fff}
+  .note{font-size:12px;color:#7f8c8d}
+  .center{text-align:center}
+  .hidden{display:none}
+  footer{padding:24px;text-align:center;color:#666}
+  .pill{display:inline-block;background:#f3f7fb;border:1px solid #e6eef5;border-radius:999px;padding:4px 10px;margin:2px;font-size:12px}
+  .admin-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .monospace{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</head>
+<body>
 
-Full documentation of the WebNative extension can be found at [webnative.dev](https://webnative.dev/introduction/getting-started/) covering topics like:
-- Building, debugging and running your Capacitor application.
-- Bundle analysis, dependency upgrades.
-- Migration from Cordova.
-- Changing native settings.
-- Splash Screens & Icons.
-- Developing without a Mac using the WebNative app.
+<header>
+  <div class="logo-wrap">
+    <img id="orgLogoImg" alt="โลโก้องค์กร">
+    <div>
+      <div style="font-weight:600">งานแนะแนว และงานอนามัยโรงเรียน</div>
+      <div>โรงเรียนจันทร์ประดิษฐารามวิทยาคม</div>
+    </div>
+  </div>
+  <h1>ใจสบาย Plus</h1>
+  <div class="note">แอปรวมแบบประเมินสุขภาพจิตมาตรฐาน – ใช้เพื่อคัดกรองเบื้องต้นเท่านั้น หากมีความเสี่ยงสูงโปรดติดต่อผู้เชี่ยวชาญ/สายด่วนสุขภาพจิต 1323</div>
+</header>
 
+<main class="grid two">
+  <!-- ฟอร์มข้อมูลผู้ใช้ -->
+  <section class="card" id="userFormCard">
+    <h2>กรอกข้อมูลก่อนทำแบบประเมิน</h2>
+    <div class="grid">
+      <div>
+        <label>ชื่อจริง</label>
+        <input id="fname" placeholder="เช่น ณัฐฐิพงศ์">
+      </div>
+      <div>
+        <label>นามสกุล</label>
+        <input id="lname" placeholder="เช่น กิจสวัสดิ์">
+      </div>
+      <div>
+        <label>วันเดือนปีเกิด (คศ.)</label>
+        <input type="date" id="bdate">
+      </div>
+    </div>
+    <div style="margin-top:12px" class="grid two">
+      <button class="btn" onclick="saveUserInfo()">บันทึกข้อมูล</button>
+      <button class="btn secondary" onclick="clearUser()">ล้างข้อมูล</button>
+    </div>
+    <div class="note">ตัวอย่างรหัสที่จะสร้าง: ณก14/05/40</div>
+  </section>
 
+  <!-- เมนูหลัก -->
+  <section class="card">
+    <h2>เริ่มทำแบบประเมิน</h2>
+    <div id="userCodeView" class="pill">รหัสผู้ทำแบบประเมิน: -</div>
+    <div class="menu grid">
+      <button onclick="startQuiz('phq9')">PHQ‑9 (ภาวะซึมเศร้า)</button>
+      <button onclick="startQuiz('gad7')">GAD‑7 (ความวิตกกังวล)</button>
+      <button onclick="startQuiz('srq20')">SRQ‑20 (สุขภาพจิตทั่วไป)</button>
+      <button onclick="startQuiz('sdq')">SDQ (สุขภาพจิตวัยรุ่น)</button>
+      <button class="btn warn" onclick="showHistory()">📊 ดูประวัติการประเมิน</button>
+      <button class="btn" onclick="openAdmin()">🔐 เข้าสู่ระบบแอดมิน</button>
+    </div>
+  </section>
 
+  <!-- พื้นที่คำถาม/ผลลัพธ์ -->
+  <section class="card" style="grid-column:1 / -1">
+    <div id="quiz" class="question"></div>
+    <div id="result" class="center"></div>
+    <div id="history" class="hidden"></div>
+  </section>
 
+  <!-- แผงแอดมิน -->
+  <section class="card hidden" id="adminPanel" style="grid-column:1 / -1">
+    <h2>แผงผู้ดูแลระบบ</h2>
+
+    <!-- เข้าสู่ระบบ/เชื่อม Google -->
+    <div id="adminAuth">
+      <h3>เข้าสู่ระบบแอดมิน</h3>
+      <div class="grid two">
+        <input id="adminUser" placeholder="ชื่อผู้ใช้">
+        <input id="adminPass" type="password" placeholder="รหัสผ่าน">
+      </div>
+      <div class="grid two">
+        <button class="btn" onclick="loginAdmin()">เข้าสู่ระบบ</button>
+        <button class="btn secondary" onclick="closeAdmin()">ปิด</button>
+      </div>
+      <hr>
+      <h3>เชื่อมต่อ Google Drive</h3>
+      <div class="note">ใส่ CLIENT_ID และ API_KEY ในโค้ด แล้วกดปุ่มด้านล่างเพื่อ Sign‑In</div>
+      <button class="btn" onclick="googleSignIn()">เชื่อม Google Drive</button>
+    </div>
+
+    <!-- เมนูหลัง Login -->
+    <div id="adminArea" class="hidden">
+      <div class="admin-nav">
+        <button class="btn" onclick="adminViewHistory()">ข้อมูลย้อนหลังทั้งหมด</button>
+        <button class="btn" onclick="adminManageQuizzes()">จัดการแบบทดสอบ</button>
+        <button class="btn" onclick="adminStyleEditor()">ตั้งค่าการแสดงผล</button>
+        <button class="btn" onclick="adminBranding()">โลโก้และป้ายหน่วยงาน</button>
+        <button class="btn" onclick="adminManageAdmins()">จัดการผู้ดูแล</button>
+        <button class="btn secondary" onclick="logoutAdmin()">ออกจากระบบ</button>
+      </div>
+      <div id="adminContent"></div>
+    </div>
+  </section>
+</main>
+
+<footer>จัดทำโดยเภสัชกรวิรุณ เวชศิริ</footer>
+
+<script>
+/* =========================
+   ค่าเริ่มต้นของแบบประเมิน
+   ========================= */
+const DEFAULT_QUIZZES = {
+  phq9:{ name:"PHQ-9 (ภาวะซึมเศร้า)",
+    options:["ไม่มีเลย","บางวัน","บ่อยครั้ง","เกือบทุกวัน"], scores:[0,1,2,3],
+    questions:[
+      "เบื่อ ไม่สนใจทำอะไรเลย","รู้สึกเศร้า หดหู่ หรือสิ้นหวัง",
+      "นอนหลับยาก หรือนอนมากเกินไป","รู้สึกเหนื่อยง่าย หรือไม่มีแรง",
+      "เบื่ออาหารหรือกินมากเกินไป","รู้สึกว่าตนเองล้มเหลว หรือทำให้ครอบครัวผิดหวัง",
+      "สมาธิไม่ดี เวลาทำงานหรือทำกิจกรรม","พูดหรือทำอะไรช้าลง หรือกระสับกระส่ายมากผิดปกติ",
+      "คิดอยากทำร้ายตนเองหรือคิดว่าควรตายไปเสีย"
+    ],
+    interpret:(s)=> s<=4?"ปกติ ✅": s<=9?"ซึมเศร้าเล็กน้อย 🟡": s<=14?"ซึมเศร้าปานกลาง 🟠": s<=19?"ซึมเศร้าปานกลางค่อนข้างรุนแรง 🔴":"ซึมเศร้ารุนแรง ❗ ควรพบแพทย์/ผู้เชี่ยวชาญทันที"
+  },
+  gad7:{ name:"GAD-7 (ความวิตกกังวล)",
+    options:["ไม่มีเลย","บางวัน","บ่อยครั้ง","เกือบทุกวัน"], scores:[0,1,2,3],
+    questions:[
+      "รู้สึกกังวล ประหม่า หรือกระวนกระวาย","ไม่สามารถหยุดความกังวลได้",
+      "กังวลมากเกินไปเกี่ยวกับหลายเรื่อง","ยากที่จะผ่อนคลาย",
+      "กระสับกระส่ายจนอยู่นิ่งไม่ได้","หงุดหงิดง่าย","รู้สึกกลัวเหมือนกำลังจะเกิดเรื่องร้ายแรง"
+    ],
+    interpret:(s)=> s<=4?"ปกติ ✅": s<=9?"วิตกกังวลเล็กน้อย 🟡": s<=14?"วิตกกังวลปานกลาง 🟠":"วิตกกังวลรุนแรง 🔴"
+  },
+  srq20:{ name:"SRQ-20 (สุขภาพจิตทั่วไป)",
+    options:["ไม่ใช่","ใช่"], scores:[0,1],
+    questions:[
+      "คุณปวดหัวบ่อยไหม?","คุณนอนหลับไม่ดีหรือไม่?","คุณกลัวโดยไม่มีเหตุผลหรือไม่?","คุณรู้สึกไม่มีความสุขบ่อยไหม?",
+      "คุณร้องไห้บ่อยหรือไม่?","คุณเบื่ออาหารหรือไม่?","คุณตัดสินใจยากหรือไม่?","คุณรู้สึกไม่คุ้มค่ากับชีวิตหรือไม่?",
+      "คุณเหนื่อยง่ายหรือไม่?","คุณคิดอยากจบชีวิตตัวเองหรือไม่?","คุณมีปัญหาการคิดหรือไม่?","คุณวิตกกังวลเกี่ยวกับสุขภาพหรือไม่?",
+      "คุณไม่สามารถทำสิ่งที่เคยทำได้หรือไม่?","คุณรู้สึกไม่มีคุณค่าหรือไม่?","คุณเสียสมาธิบ่อยหรือไม่?","คุณรู้สึกไร้ความหวังหรือไม่?",
+      "คุณรู้สึกกังวลเรื่องอนาคตหรือไม่?","คุณมีอาการทางร่างกายที่หาสาเหตุไม่ได้หรือไม่?","คุณรู้สึกคนรอบข้างเข้าใจผิดหรือไม่?","คุณได้ยินเสียงหรือเห็นสิ่งที่ไม่มีจริงหรือไม่?"
+    ],
+    interpret:(s)=> s<=7?"สุขภาพจิตปกติ ✅":"อาจมีปัญหาสุขภาพจิต ควรปรึกษาผู้เชี่ยวชาญ 🟡"
+  },
+  sdq:{ name:"SDQ (สุขภาพจิตวัยรุ่น)",
+    options:["ไม่จริง","จริงบ้าง","จริงมาก"], scores:[0,1,2],
+    questions:[
+      "ฉันพยายามช่วยเหลือคนอื่นเวลามีปัญหา","ฉันอยู่ไม่นิ่ง นั่งนิ่งยาก",
+      "ฉันมักจะรู้สึกเศร้า หดหู่ หรือร้องไห้ง่าย","ฉันเข้ากับเพื่อนได้ง่าย",
+      "ฉันมักจะทะเลาะกับคนอื่น","ฉันทำการบ้านหรือหน้าที่ที่ได้รับมอบหมายจนเสร็จ",
+      "ฉันมักจะกังวลเกี่ยวกับหลายเรื่อง","ฉันเป็นเพื่อนที่ดีต่อคนอื่น",
+      "ฉันถูกรังแกหรือกลั่นแกล้งบ่อย","ฉันคิดก่อนทำ"
+    ],
+    interpret:(s)=> s<=12?"ปกติ ✅": s<=16?"มีความเสี่ยงเล็กน้อย 🟡":"ควรได้รับการประเมินเพิ่มเติม 🔴"
+  }
+};
+
+/* ====== สถานะและตัวแปร ====== */
+let quizzes = loadQuizzes(); // โหลดจาก LocalStorage/ค่าเริ่มต้น
+let currentQuiz = null, currentQ = 0, totalScore = 0;
+let userCode = localStorage.getItem("userCode") || "";
+const quizEl = document.getElementById("quiz");
+const resultEl = document.getElementById("result");
+const historyEl = document.getElementById("history");
+const userFormCard = document.getElementById("userFormCard");
+const userCodeView = document.getElementById("userCodeView");
+const orgLogoImg = document.getElementById("orgLogoImg");
+
+/* ====== โหลดโลโก้องค์กร (base64 จาก LocalStorage) ====== */
+function loadLogo(){
+  const stored = localStorage.getItem("orgLogoBase64");
+  if(stored){ orgLogoImg.src = stored; }
+  else{
+    // พื้นหลังโปร่งใสไว้ก่อน (วาดวงกลมจางๆ)
+    const c = document.createElement("canvas"); c.width=128; c.height=128;
+    const ctx = c.getContext("2d"); ctx.fillStyle="#f5f9ff"; ctx.beginPath(); ctx.arc(64,64,60,0,Math.PI*2); ctx.fill();
+    orgLogoImg.src = c.toDataURL();
+  }
+}
+
+/* ====== จัดการข้อมูลผู้ใช้ -> รหัส ณก14/05/40 ====== */
+function saveUserInfo(){
+  const fname = (document.getElementById("fname").value||"").trim();
+  const lname = (document.getElementById("lname").value||"").trim();
+  const bdate = document.getElementById("bdate").value;
+  if(!fname||!lname||!bdate){ alert("กรุณากรอกชื่อ นามสกุล และวันเกิดให้ครบ"); return; }
+  const d = new Date(bdate);
+  const day = String(d.getDate()).padStart(2,"0");
+  const month = String(d.getMonth()+1).padStart(2,"0");
+  const yearBE2 = String(d.getFullYear()+543).slice(-2);
+  userCode = fname[0] + lname[0] + day + "/" + month + "/" + yearBE2;
+  localStorage.setItem("userCode", userCode);
+  renderUserCode();
+}
+function clearUser(){ localStorage.removeItem("userCode"); userCode=""; renderUserCode(); }
+function renderUserCode(){
+  userCodeView.textContent = "รหัสผู้ทำแบบประเมิน: " + (userCode||"-");
+  userFormCard.style.display = userCode? "none":"block";
+}
+renderUserCode(); loadLogo();
+
+/* ====== เริ่มทำแบบประเมิน ====== */
+function startQuiz(type){
+  if(!userCode){ alert("กรุณากรอกข้อมูลผู้ใช้ก่อนทำแบบประเมิน"); return; }
+  currentQuiz = quizzes[type];
+  currentQ = 0; totalScore = 0;
+  resultEl.innerHTML=""; historyEl.classList.add("hidden"); historyEl.innerHTML="";
+  showQuestion();
+}
+function showQuestion(){
+  if(currentQ < currentQuiz.questions.length){
+    const q = currentQuiz.questions[currentQ];
+    quizEl.innerHTML = `<h3>${q}</h3><div class="options"></div>`;
+    const holder = quizEl.querySelector(".options");
+    currentQuiz.options.forEach((opt,i)=>{
+      const b = document.createElement("button"); b.className="btn"; b.textContent = opt;
+      b.onclick = ()=> selectAnswer(i); holder.appendChild(b);
+    });
+  }else{ showResult(); }
+}
+function selectAnswer(i){ totalScore += currentQuiz.scores[i]; currentQ++; showQuestion(); }
+
+function showResult(){
+  quizEl.innerHTML = "";
+  const interp = currentQuiz.interpret(totalScore);
+  const nowTH = new Date().toLocaleString("th-TH");
+  resultEl.innerHTML = `
+    <h3>ผลการประเมิน</h3>
+    <div class="pill">ผู้ประเมิน: ${userCode}</div>
+    <div class="pill">วันที่: ${nowTH}</div>
+    <p><b>${currentQuiz.name}</b><br>คะแนนรวม: <b>${totalScore}</b><br>ผลแปลผล: <b>${interp}</b></p>
+    <div class="grid two">
+      <button class="btn" onclick="backToMenu()">กลับสู่เมนู</button>
+      <button class="btn warn" onclick="showHistory()">ดูประวัติ</button>
+    </div>
+  `;
+  saveResult(currentQuiz.name,totalScore,interp,nowTH);
+}
+
+/* ====== บันทึก/แสดงประวัติ ====== */
+function saveResult(testName,score,interpretation,thDate){
+  let history = JSON.parse(localStorage.getItem("mentalHealthHistory") || "[]");
+  history.push({date: thDate, user:userCode, test:testName, score:score, result:interpretation});
+  localStorage.setItem("mentalHealthHistory", JSON.stringify(history));
+}
+function showHistory(){
+  quizEl.innerHTML=""; resultEl.innerHTML=""; historyEl.classList.remove("hidden");
+  const hist = JSON.parse(localStorage.getItem("mentalHealthHistory") || "[]").slice().reverse();
+  let html = `<h3>📊 ประวัติการประเมิน</h3>
+  <div class="note">สามารถส่งออก PDF/PNG หรืออัปโหลดขึ้น Google Drive ได้จากที่นี่</div>`;
+  if(hist.length===0){ html += "<p>ยังไม่มีประวัติ</p>"; }
+  else{
+    html += hist.map((h,i)=>`
+      <div class="history-entry">
+        <b>${i+1}.</b> รหัส: ${h.user} · วันที่: ${h.date}<br>
+        แบบประเมิน: ${h.test}<br>
+        คะแนน: ${h.score} · ผล: ${h.result}
+      </div>`).join("");
+    html += `
+      <div class="grid two" style="margin-top:12px">
+        <button class="btn" onclick="exportPDF()">📄 ส่งออก PDF</button>
+        <button class="btn" onclick="exportPNG()">🖼️ ส่งออก PNG</button>
+      </div>
+      <div class="grid two" style="margin-top:8px">
+        <button class="btn" onclick="uploadHistoryJSON()">⬆️ อัปโหลด JSON ไป Google Drive</button>
+        <button class="btn danger" onclick="clearHistory()">🗑️ ล้างประวัติทั้งหมด</button>
+      </div>
+      <div class="center" style="margin-top:8px"><button class="btn secondary" onclick="backToMenu()">กลับสู่เมนู</button></div>
+    `;
+  }
+  historyEl.innerHTML = html;
+}
+function clearHistory(){ localStorage.removeItem("mentalHealthHistory"); showHistory(); }
+function backToMenu(){ quizEl.innerHTML=""; resultEl.innerHTML=""; historyEl.innerHTML=""; historyEl.classList.add("hidden"); }
+
+/* ====== ส่งออก PDF/PNG (ใส่โลโก้+ป้ายหน่วยงาน+วันเวลา) ====== */
+async function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:"pt"});
+  // โลโก้
+  const logoSrc = localStorage.getItem("orgLogoBase64") || orgLogoImg.src;
+  const logo = await loadImage(logoSrc);
+  doc.addImage(logo, "PNG", 260, 24, 76, 76);
+  doc.setFontSize(14);
+  doc.text("งานแนะแนว และงานอนามัยโรงเรียน", 306, 120, {align:"center"});
+  doc.text("โรงเรียนจันทร์ประดิษฐารามวิทยาคม", 306, 138, {align:"center"});
+  doc.setFontSize(18); doc.text("รายงานผลการประเมินสุขภาพจิต", 306, 164, {align:"center"});
+
+  const hist = JSON.parse(localStorage.getItem("mentalHealthHistory")||"[]");
+  let y = 190; doc.setFontSize(12);
+  hist.forEach((h,idx)=>{
+    doc.text(`${idx+1}. รหัส: ${h.user}`, 40, y);
+    doc.text(`วันที่: ${h.date}`, 300, y);
+    doc.text(`แบบประเมิน: ${h.test}`, 40, y+16);
+    doc.text(`คะแนน: ${h.score} · ผล: ${h.result}`, 40, y+32);
+    y += 54; if(y>760){ doc.addPage(); y=40; }
+  });
+
+  doc.save("ผลการประเมินสุขภาพจิต.pdf");
+}
+function exportPNG(){
+  // แปลงพื้นที่ history เป็นภาพ
+  const node = document.getElementById("history");
+  if(node.classList.contains("hidden")){ showHistory(); }
+  setTimeout(()=> {
+    html2canvas(node,{scale:2,backgroundColor:"#ffffff"}).then(canvas=>{
+      const link = document.createElement("a");
+      link.download = "ผลการประเมินสุขภาพจิต.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  }, 50);
+}
+function loadImage(src){ return new Promise(res=>{ const i=new Image(); i.onload=()=>res(i); i.src=src; }); }
+
+/* ====== ระบบแอดมินพื้นฐาน ====== */
+const adminPanel = document.getElementById("adminPanel");
+function openAdmin(){ adminPanel.classList.remove("hidden"); }
+function closeAdmin(){ adminPanel.classList.add("hidden"); }
+let admins = JSON.parse(localStorage.getItem("admins")||"[]");
+if(admins.length===0){ admins=[{user:"admin",pass:btoa("1234")}]; localStorage.setItem("admins",JSON.stringify(admins)); }
+let isAdmin = false;
+
+function loginAdmin(){
+  const u = document.getElementById("adminUser").value;
+  const p = document.getElementById("adminPass").value;
+  const ok = admins.find(a=>a.user===u && a.pass===btoa(p));
+  if(ok){ isAdmin=true; document.getElementById("adminAuth").classList.add("hidden"); document.getElementById("adminArea").classList.remove("hidden"); adminViewHistory(); }
+  else alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+}
+function logoutAdmin(){ isAdmin=false; document.getElementById("adminAuth").classList.remove("hidden"); document.getElementById("adminArea").classList.add("hidden"); }
+
+/* ----- เมนูย่อยแอดมิน ----- */
+function adminViewHistory(){
+  const hist = JSON.parse(localStorage.getItem("mentalHealthHistory")||"[]");
+  let html = `<h3>ข้อมูลย้อนหลังทั้งหมด (${hist.length} รายการ)</h3>
+  <div class="grid two" style="margin-bottom:8px">
+    <input id="searchUser" placeholder="ค้นหารหัสผู้ทำแบบ: เช่น ณก14/05/40">
+    <button class="btn" onclick="filterHistory()">ค้นหา</button>
+  </div>`;
+  html += hist.map((h,idx)=>`
+    <div class="history-entry">
+      <b>#${idx+1}</b> · รหัส: <span class="pill">${h.user}</span> · วันที่: ${h.date}<br>
+      ${h.test} · คะแนน: ${h.score} · ผล: ${h.result}<br>
+      <button class="btn danger" onclick="deleteHistory(${idx})">ลบ</button>
+    </div>`).join("");
+  html += `<div class="grid two" style="margin-top:12px">
+    <button class="btn" onclick="exportPDF()">📄 ส่งออก PDF</button>
+    <button class="btn" onclick="exportPNG()">🖼️ ส่งออก PNG</button>
+  </div>
+  <div class="grid two" style="margin-top:8px">
+    <button class="btn" onclick="uploadHistoryJSON()">⬆️ อัปโหลด JSON ไป Google Drive</button>
+    <button class="btn danger" onclick="clearHistory()">🗑️ ล้างประวัติทั้งหมด</button>
+  </div>`;
+  document.getElementById("adminContent").innerHTML = html;
+}
+function filterHistory(){
+  const q = (document.getElementById("searchUser").value||"").trim();
+  let hist = JSON.parse(localStorage.getItem("mentalHealthHistory")||"[]");
+  if(q) hist = hist.filter(h=> (h.user||"").includes(q));
+  localStorage.setItem("filtered", JSON.stringify(hist));
+  let html = `<h3>ผลการค้นหา (${hist.length})</h3>` + hist.map((h,i)=>`
+    <div class="history-entry">
+      <b>${i+1}.</b> รหัส: ${h.user} · ${h.date}<br>${h.test} · ${h.score} · ${h.result}
+    </div>`).join("");
+  document.getElementById("adminContent").innerHTML = html + `<div class="center" style="margin-top:8px"><button class="btn" onclick="adminViewHistory()">ย้อนกลับ</button></div>`;
+}
+function deleteHistory(i){
+  let hist = JSON.parse(localStorage.getItem("mentalHealthHistory")||"[]");
+  hist.splice(i,1); localStorage.setItem("mentalHealthHistory", JSON.stringify(hist)); adminViewHistory();
+}
+
+function adminManageQuizzes(){
+  const data = JSON.stringify(quizzes, null, 2);
+  const html = `<h3>จัดการแบบทดสอบ</h3>
+  <div class="note">แก้ไข JSON ด้านล่าง (name, options, scores, questions, interpret)</div>
+  <textarea id="quizData" rows="18" class="monospace">${data}</textarea>
+  <div class="grid two" style="margin-top:8px">
+    <button class="btn" onclick="saveQuizzes()">บันทึก</button>
+    <button class="btn secondary" onclick="resetQuizzes()">คืนค่าเริ่มต้น</button>
+  </div>`;
+  document.getElementById("adminContent").innerHTML = html;
+}
+function saveQuizzes(){
+  try{
+    const obj = JSON.parse(document.getElementById("quizData").value);
+    quizzes = obj; localStorage.setItem("quizzesCustom", JSON.stringify(obj));
+    alert("บันทึกแบบทดสอบเรียบร้อย");
+  }catch(e){ alert("JSON ไม่ถูกต้อง"); }
+}
+function resetQuizzes(){ localStorage.removeItem("quizzesCustom"); quizzes = loadQuizzes(); adminManageQuizzes(); }
+
+function adminStyleEditor(){
+  const style = JSON.parse(localStorage.getItem("appStyle")||"{}");
+  const html = `<h3>ตั้งค่าการแสดงผล (Global Style)</h3>
+  <div class="grid two">
+    <div>
+      <label>ฟอนต์</label>
+      <select id="fontFamily">
+        <option ${sel(style.fontFamily,"Prompt")}>Prompt</option>
+        <option ${sel(style.fontFamily,"Kanit")}>Kanit</option>
+        <option ${sel(style.fontFamily,"Sarabun")}>Sarabun</option>
+      </select>
+    </div>
+    <div>
+      <label>ขนาดอักษร (px)</label>
+      <input type="number" id="fontSize" value="${style.fontSize||16}">
+    </div>
+    <div>
+      <label>สีอักษร</label>
+      <input type="color" id="fontColor" value="${style.fontColor||"#2c3e50"}">
+    </div>
+    <div>
+      <label>การจัดตำแหน่ง</label>
+      <select id="textAlign">
+        <option ${sel(style.textAlign,"left")}>left</option>
+        <option ${sel(style.textAlign,"center")}>center</option>
+        <option ${sel(style.textAlign,"right")}>right</option>
+        <option ${sel(style.textAlign,"justify")}>justify</option>
+      </select>
+    </div>
+    <div>
+      <label>น้ำหนัก</label>
+      <select id="fontWeight">
+        <option ${sel(style.fontWeight,"normal")}>normal</option>
+        <option ${sel(style.fontWeight,"bold")}>bold</option>
+        <option ${sel(style.fontWeight,"italic")}>italic</option>
+        <option ${sel(style.fontWeight,"underline")}>underline</option>
+      </select>
+    </div>
+  </div>
+  <div class="grid two" style="margin-top:8px">
+    <button class="btn" onclick="applyStyle()">ใช้การตั้งค่า</button>
+    <button class="btn" onclick="saveStyle()">บันทึก + อัปโหลดไป Drive</button>
+  </div>
+  <hr>
+  <h3>โค้ดเพิ่มพิเศษ</h3>
+  <div class="grid two">
+    <div>
+      <label>Custom CSS</label>
+      <textarea id="customCSS" rows="8" class="monospace">${localStorage.getItem("customCSS")||""}</textarea>
+      <button class="btn" onclick="applyCustomCSS()">ใช้ CSS</button>
+    </div>
+    <div>
+      <label>Custom JS (จะรันทันที)</label>
+      <textarea id="customJS" rows="8" class="monospace">${localStorage.getItem("customJS")||""}</textarea>
+      <button class="btn" onclick="applyCustomJS()">รัน JS</button>
+    </div>
+  </div>`;
+  document.getElementById("adminContent").innerHTML = html;
+}
+function sel(a,b){ return (a||"")===b ? "selected":""; }
+
+function applyStyle(){
+  const style = {
+    fontFamily: document.getElementById("fontFamily").value,
+    fontSize: parseInt(document.getElementById("fontSize").value||16,10),
+    fontColor: document.getElementById("fontColor").value,
+    textAlign: document.getElementById("textAlign").value,
+    fontWeight: document.getElementById("fontWeight").value
+  };
+  localStorage.setItem("appStyle", JSON.stringify(style));
+  loadStyle();
+}
+function saveStyle(){
+  const style = localStorage.getItem("appStyle")||"{}";
+  uploadTextToDrive(style,"style.json","application/json");
+  alert("บันทึกการตั้งค่าและอัปโหลดไป Google Drive แล้ว (ถ้าเชื่อมบัญชีไว้)");
+}
+function loadStyle(){
+  const style = JSON.parse(localStorage.getItem("appStyle")||"{}");
+  if(style.fontFamily) document.body.style.fontFamily = style.fontFamily;
+  if(style.fontSize) document.body.style.fontSize = style.fontSize+"px";
+  if(style.fontColor) document.body.style.color = style.fontColor;
+  if(style.textAlign) document.body.style.textAlign = style.textAlign;
+  // reset weight styles
+  document.body.style.fontStyle="normal"; document.body.style.textDecoration="none"; document.body.style.fontWeight="normal";
+  if(style.fontWeight==="italic") document.body.style.fontStyle="italic";
+  else if(style.fontWeight==="underline") document.body.style.textDecoration="underline";
+  else if(style.fontWeight==="bold") document.body.style.fontWeight="bold";
+}
+loadStyle();
+
+function applyCustomCSS(){
+  const css = document.getElementById("customCSS").value;
+  localStorage.setItem("customCSS", css);
+  let tag = document.getElementById("customCSSTag");
+  if(!tag){ tag = document.createElement("style"); tag.id="customCSSTag"; document.head.appendChild(tag); }
+  tag.textContent = css;
+}
+function applyCustomJS(){
+  const js = document.getElementById("customJS").value;
+  localStorage.setItem("customJS", js);
+  try{ new Function(js)(); alert("รันโค้ด JS สำเร็จ"); }catch(e){ alert("โค้ดผิดพลาด: "+e.message); }
+}
+
+function adminBranding(){
+  const html = `<h3>โลโก้และป้ายหน่วยงาน</h3>
+  <div class="grid two">
+    <div>
+      <label>อัปโหลดโลโก้ (PNG/JPG)</label>
+      <input type="file" accept="image/*" onchange="uploadLogo(event)">
+      <div class="note">โลโก้จะถูกบันทึกแบบ base64 และใช้ใน PDF/PNG อัตโนมัติ</div>
+    </div>
+    <div class="center">
+      <img id="previewLogo" style="height:96px;border-radius:50%;background:#fff;padding:6px">
+    </div>
+  </div>`;
+  document.getElementById("adminContent").innerHTML = html;
+  document.getElementById("previewLogo").src = localStorage.getItem("orgLogoBase64") || orgLogoImg.src;
+}
+function uploadLogo(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const reader = new FileReader();
+  reader.onload = e => { localStorage.setItem("orgLogoBase64", e.target.result); loadLogo(); document.getElementById("previewLogo").src = e.target.result; alert("บันทึกโลโก้เรียบร้อย"); };
+  reader.readAsDataURL(f);
+}
+
+function adminManageAdmins(){
+  let html = `<h3>จัดการผู้ดูแลระบบ</h3>` + admins.map((a,i)=>`
+    <div class="history-entry">👤 ${a.user}
+      <button class="btn danger" onclick="removeAdmin(${i})">ลบ</button>
+    </div>`).join("");
+  html += `<div class="grid two" style="margin-top:8px">
+    <input id="newAdminUser" placeholder="ชื่อผู้ใช้ใหม่">
+    <input id="newAdminPass" type="password" placeholder="รหัสผ่านใหม่">
+  </div>
+  <button class="btn" onclick="addAdmin()">เพิ่มแอดมิน</button>`;
+  document.getElementById("adminContent").innerHTML = html;
+}
+function addAdmin(){
+  const u=document.getElementById("newAdminUser").value.trim();
+  const p=document.getElementById("newAdminPass").value.trim();
+  if(!u||!p) return alert("กรุณากรอกข้อมูลให้ครบ");
+  admins.push({user:u, pass:btoa(p)}); localStorage.setItem("admins",JSON.stringify(admins)); adminManageAdmins();
+}
+function removeAdmin(i){ admins.splice(i,1); localStorage.setItem("admins",JSON.stringify(admins)); adminManageAdmins(); }
+
+/* ====== โหลดยูนิตแบบทดสอบ ====== */
+function loadQuizzes(){
+  const custom = localStorage.getItem("quizzesCustom");
+  if(custom){ try{ return JSON.parse(custom); }catch{ return DEFAULT_QUIZZES; } }
+  return DEFAULT_QUIZZES;
+}
+
+/* ====== เชื่อม Google Drive (ใส่คีย์ภายหลัง) ====== */
+const API_KEY   = "YOUR_API_KEY"; // <- ใส่ทีหลัง
+const CLIENT_ID = "YOUR_CLIENT_ID.apps.googleusercontent.com"; // <- ใส่ทีหลัง
+const SCOPE = "https://www.googleapis.com/auth/drive.file";
+let gInited=false;
+
+function initGapi(){
+  return gapi.client.init({
+    apiKey: API_KEY,
+    clientId: CLIENT_ID,
+    scope: SCOPE,
+    discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"]
+  });
+}
+function googleSignIn(){
+  gapi.load("client:auth2", ()=>{
+    initGapi().then(()=>{
+      gInited=true;
+      gapi.auth2.getAuthInstance().signIn().then(()=> alert("เชื่อม Google Drive สำเร็จ"));
+    }).catch(()=> alert("กรุณาใส่ API KEY/CLIENT ID ให้ถูกต้อง"));
+  });
+}
+function uploadTextToDrive(text, fileName, mime){
+  if(!gInited || !gapi.auth2.getAuthInstance().isSignedIn.get()){ alert("กรุณาเชื่อม Google Drive ก่อน"); return; }
+  const boundary = "-------314159265358979323846"; const delimiter = "\r\n--"+boundary+"\r\n"; const close = "\r\n--"+boundary+"--";
+  const meta = {name:fileName,mimeType:mime};
+  const base64Data = btoa(unescape(encodeURIComponent(text)));
+  const body = delimiter+'Content-Type: application/json\r\n\r\n'+JSON.stringify(meta)+delimiter+'Content-Type: '+mime+'\r\nContent-Transfer-Encoding: base64\r\n\r\n'+base64Data+close;
+  gapi.client.request({
+    path:"/upload/drive/v3/files", method:"POST", params:{uploadType:"multipart"},
+    headers:{ "Content-Type":"multipart/related; boundary="+boundary }, body
+  }).then(()=> alert("อัปโหลดไฟล์เรียบร้อย"));
+}
+function uploadBlobToDrive(base64, fileName, mime){
+  if(!gInited || !gapi.auth2.getAuthInstance().isSignedIn.get()){ alert("กรุณาเชื่อม Google Drive ก่อน"); return; }
+  const boundary="-------314159265358979323846"; const delimiter="\r\n--"+boundary+"\r\n"; const close="\r\n--"+boundary+"--";
+  const meta={name:fileName,mimeType:mime};
+  const body = delimiter+'Content-Type: application/json\r\n\r\n'+JSON.stringify(meta)+delimiter+'Content-Type: '+mime+'\r\nContent-Transfer-Encoding: base64\r\n\r\n'+base64+close;
+  gapi.client.request({
+    path:"/upload/drive/v3/files", method:"POST", params:{uploadType:"multipart"},
+    headers:{ "Content-Type":"multipart/related; boundary="+boundary }, body
+  }).then(()=> alert("อัปโหลดไฟล์เรียบร้อย"));
+}
+
+/* อัปโหลดประวัติทั้งหมดเป็น JSON ไป Drive */
+function uploadHistoryJSON(){
+  const hist = localStorage.getItem("mentalHealthHistory") || "[]";
+  const stamp = new Date().toISOString().slice(0,10);
+  uploadTextToDrive(hist, `mental_history_${stamp}.json`, "application/json");
+}
+
+/* =========== จบสคริปต์หลัก =========== */
+</script>
+</body>
+</html>
